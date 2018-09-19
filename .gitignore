@@ -1,0 +1,10 @@
+output/*.txt
+cmake-build-debug
+build
+*.*~
+.idea
+.tags**
+CMakeLists.txt.user
+*.pcd
+*.ply
+

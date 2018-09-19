@@ -1,0 +1,7 @@
+﻿<launch>
+
+    <node pkg="show_pointcloud" type="readin" name="readin" output="screen">
+      <param name="pointcloud_path"  type="string" value="$(find msckf_data)/euroc_mav/V1_03_difficult.pcd" />
+  </node>
+
+</launch>
