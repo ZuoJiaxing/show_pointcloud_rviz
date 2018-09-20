@@ -50,43 +50,34 @@ main (int argc, char **argv)
     ros::init (argc, argv, "readin");
 
     ros::NodeHandle nh;
-    ros::Publisher pcl_pub = nh.advertise<sensor_msgs::PointCloud2> ("pcl_output", 1);
+    ros::NodeHandle nhPrivate("~");
+    ros::Publisher pcl_pub = nh.advertise<sensor_msgs::PointCloud2> ("showpointcloud_output", 1);
     sensor_msgs::PointCloud2 output;
-    ros::Publisher pcl_pub_lidar = nh.advertise<sensor_msgs::PointCloud2> ("pcl_output_lidar", 1);
-    sensor_msgs::PointCloud2 output_lidar;
-	
-	
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_lidar (new pcl::PointCloud<pcl::PointXYZI>);
+    std::string PC_path;
+    nhPrivate.param<std::string>("pointcloud_path", PC_path, "/home/rocky/catkin_ws/src/msckf_auto_mapreuse/msckf_data/euroc_mav/V1_03_difficult.pcd");
+    int PC_downsamppts;
+    nhPrivate.param<int>("pc_downsample_pts", PC_downsamppts, 300000);
 
-  if (pcl::io::loadPCDFile<pcl::PointXYZRGB> ("/home/rocky/catkin_ws/src/msckf_auto_mapreuse/msckf_core/visualpcdmap/v102_pcd/visual1403715590162142976.pcd", *cloud) == -1) //* load the file
+	
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZI>);
+
+  if (pcl::io::loadPCDFile<pcl::PointXYZI> (PC_path, *cloud) == -1) //* load the file
   {
     PCL_ERROR ("Couldn't read file visual1403715590162142976.pcd \n");
     return (-1);
   }
 
-  if (pcl::io::loadPCDFile<pcl::PointXYZI> ("/home/rocky/catkin_ws/src/msckf_auto_mapreuse/msckf_data/euroc_mav/V1_03_difficult.pcd", *cloud_lidar) == -1) //* load the file
-  {
-    PCL_ERROR ("Couldn't read file .pcd \n");
-    return (-1);
-  }
+  //Downsample the lidar pointcloud
+  randomfilter_XYZI_pts(cloud,PC_downsamppts);
+  PassThroughfilter_XYZI(cloud);
+  //Convert the cloud to ROS message
+  pcl::toROSMsg(*cloud, output);
+  output.header.frame_id = "global";
 
-    //Convert the cloud to ROS message
-    pcl::toROSMsg(*cloud, output);
-    output.header.frame_id = "global";
-    //Downsample the lidar pointcloud
-    randomfilter_XYZI_pts(cloud_lidar,300000);
-    PassThroughfilter_XYZI(cloud_lidar);
-
-    //Convert the cloud to ROS message
-    pcl::toROSMsg(*cloud_lidar, output_lidar);
-    output_lidar.header.frame_id = "global";
-
-    ros::Rate loop_rate(1);
+    ros::Rate loop_rate(0.1);
     while (ros::ok())
     {
         pcl_pub.publish(output);
-        pcl_pub_lidar.publish(output_lidar);
         ros::spinOnce();
         loop_rate.sleep();
     }
